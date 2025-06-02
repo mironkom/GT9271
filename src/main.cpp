@@ -4,7 +4,6 @@
 
 #define SDA_PIN            21
 #define SCL_PIN            22
-#define PIN_RSTB           4
 
 #define I2C_PRIMARY        0x14
 #define I2C_ALT            0x5D
@@ -14,9 +13,10 @@
 #define REG_CFG_START      0x8047
 #define REG_CFG_CHKSUM     0x80FF
 #define REG_CFG_REFRESH    0x8100
+
 #define CFG_SIZE           184
 
-// =====184-БАЙТНЫЙ МАССИВ КОНФИГ (version=0x90) =====
+// =====184-BYTE ARRAY CONFIG (version=0x90) =====
 uint8_t gt9271_cfg[CFG_SIZE] = {
   0x90,0x00,0x05,0x20,0x03,0x0A,0x3D,0x20, 0x01,0x0A,0x28,0x0F,0x6E,0x5A,0x03,0x05,
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x18, 0x1A,0x1E,0x14,0x8F,0x2F,0xAA,0x26,0x24,
@@ -115,11 +115,8 @@ void dumpConfig(const uint8_t* buf, uint8_t checksum) {
 void setup() {
   Serial.begin(115200);
   Wire.begin(SDA_PIN, SCL_PIN);
-  pinMode(PIN_RSTB, OUTPUT);
-  digitalWrite(PIN_RSTB, HIGH);
-  delay(50);
 
-  // 1) Сканируем шину и выбираем адрес
+  // 1) scan and select the address
   i2c_addr = scanI2C();
   if (!i2c_addr) {
     Serial.println("ERROR: No I2C device found!");
@@ -127,7 +124,7 @@ void setup() {
   }
   Serial.printf("I2C device at 0x%02X\n\n", i2c_addr);
 
-  // 2) «До» — дамп конфига и checksum
+  // 2) “Before” - config dump and checksum
   Serial.println("=== BEFORE UPDATE ===");
   readConfig(REG_CFG_START, before_cfg, CFG_SIZE);
   before_chk = readReg(i2c_addr, REG_CFG_CHKSUM);
@@ -138,32 +135,27 @@ void setup() {
   writeReg(i2c_addr, REG_ESD,       0xAA); delay(5);
   Serial.printf("\nESD HS read=0x%02X\n", readReg(i2c_addr, REG_ESD));
 
-  // 4) Запись конфига чанками ≤30 байт
+  // 4) Writing config in chunks ≤30 bytes
   Serial.println("\n=== WRITING CONFIG ===");
   writeBlock(REG_CFG_START, gt9271_cfg, CFG_SIZE);
 
-  // 5) Считаем и пишем checksum
+  // 5) calculate and write checksum
   uint16_t sum = 0;
   for (auto b : gt9271_cfg) sum += b;
   uint8_t chk = (~sum) + 1;
   Serial.printf("Writing checksum 0x%02X → ret=%d\n",
                 chk, writeReg(i2c_addr, REG_CFG_CHKSUM, chk));
 
-  // 6) Установка Config_Fresh
+  // 6) set Config_Fresh
   Serial.printf("Writing REFRESH → ret=%d\n",
                 writeReg(i2c_addr, REG_CFG_REFRESH, 1));
 
-  // 7) Save-to-Flash & reboot командой 0x02
+  // 7) Save-to-Flash & reboot command 0x02
   Serial.printf("Save-to-Flash → ret=%d\n",
                 writeReg(i2c_addr, REG_ESD, 2));
   delay(200);
 
-  // 8) Hardware reset (опционально)
-  digitalWrite(PIN_RSTB, LOW); delay(10); digitalWrite(PIN_RSTB, HIGH);
-  Serial.println("\nPanel reset, waiting…");
-  delay(100);
-
-  // 9) «После» — новый дамп и checksum
+  // 8) "After" - new dump and checksum
   Serial.println("\n=== AFTER UPDATE ===");
   readConfig(REG_CFG_START, after_cfg, CFG_SIZE);
   after_chk = readReg(i2c_addr, REG_CFG_CHKSUM);
@@ -171,5 +163,5 @@ void setup() {
 }
 
 void loop() {
-  // не используется
+  // not use
 }
