@@ -39,7 +39,6 @@ uint8_t i2c_addr = 0;
 
 
 
-// —————— Вспомогательные ——————
 
 uint8_t scanI2C() {
   for (uint8_t addr = 1; addr < 127; ++addr) {
@@ -130,7 +129,7 @@ void setup() {
   before_chk = readReg(i2c_addr, REG_CFG_CHKSUM);
   dumpConfig(before_cfg, before_chk);
 
-  // 3) ESD-handshake: 0x8046 и 0x8040 → 0xAA
+  // 3) ESD-handshake: 0x8046 и 0x8040 → 0xAA 
   writeReg(i2c_addr, REG_CMD_CHECK, 0xAA); delay(5);
   writeReg(i2c_addr, REG_ESD,       0xAA); delay(5);
   Serial.printf("\nESD HS read=0x%02X\n", readReg(i2c_addr, REG_ESD));
